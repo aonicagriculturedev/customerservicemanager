@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cari Cawangan Aonic Terdekat</title>
+
+<style>
+  /* Global Styles */
+  body { 
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+    background-color: #f4f7f6;
+    color: #333;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+
+  h2, h3 { color: #2c3e50; margin-top: 0; }
+
+  /* Search Section */
+  .search-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  input[type="text"], input[type="number"] {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  input:focus { border-color: #3498db; }
+
+  button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: opacity 0.3s, background 0.3s;
+  }
+
+  #searchBtn { background-color: #3498db; color: white; }
+  #searchBtn:hover { background-color: #2980b9; }
+  #searchBtn:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+  /* Table Styles */
+  .table-container { overflow-x: auto; margin-top: 20px; }
+  
+  table { 
+    border-collapse: collapse; 
+    width: 100%; 
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  th, td { 
+    text-align: left; 
+    padding: 14px; 
+    border-bottom: 1px solid #eee; 
+  }
+
+  th { background-color: #f8f9fa; color: #7f8c8d; font-size: 14px; }
+  tr:hover { background-color: #fdfdfd; }
+
+  /* Editor Section */
+  #editor { 
+    margin-top: 30px; 
+    border: 1px dashed #cbd5e0; 
+    padding: 20px; 
+    border-radius: 8px;
+    background-color: #fafafa;
+  }
+
+  .btn-secondary { background-color: #95a5a6; color: white; margin-top: 20px; }
+  .btn-add { background-color: #2ecc71; color: white; }
+  .btn-save { background-color: #f1c40f; color: #333; }
+  .btn-cancel { background-color: #e74c3c; color: white; }
+
+  #loading { display:none; color: #3498db; font-style: italic; margin-top: 10px; }
+  hr { border: 0; border-top: 1px solid #eee; margin: 30px 0; }
+
+  a { text-decoration: none; font-size: 18px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>📍 Cari Cawangan Aonic Terdekat</h2>
+
+  <div class="search-group">
+    <input type="text" id="placeInput" placeholder="Masukkan nama tempat (contoh: KLCC atau Kangar)">
+    <button id="searchBtn" onclick="findNearest()">Cari Sekarang</button>
+  </div>
+
+  <p id="loading">🔍 Sedang mencari lokasi terbaik untuk anda...</p>
+  <p id="output"></p>
+
+  <div class="table-container">
+    <table id="resultTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Negeri</th>
+          <th>Nama Tempat</th>
+          <th>Arah Jalan</th>
+          <th>Cawangan Terdekat</th>
+          <th>Jarak (km)</th>
+        </tr>
+      </thead>
+      <tbody id="resultBody"></tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <button class="btn-secondary" onclick="toggleEditor()">🛠️ Urus Data Cawangan</button>
+
+  <div id="editor" style="display:none;">
+    <h3>Edit Lokasi Aonic</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Nama Cawangan</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+            <th style="width: 50px;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="editorBody"></tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 15px; display: flex; gap: 10px;">
+      <button class="btn-add" onclick="addPlace()">➕ Tambah</button>
+      <button class="btn-save" onclick="savePlaces()">💾 Simpan Data</button>
+      <button class="btn-cancel" onclick="resetPlaces()">↩️ Batal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// DATA ASAL
+let places = JSON.parse(localStorage.getItem("aonicPlaces")) || [
+  { name: "Aonic Kangar", lat: 6.413172980778252, lng: 100.18318061064639 },
+  { name: "Aonic Jitra", lat: 6.2839976978, lng: 100.3860598288 },
+  { name: "Aonic Alor Setar", lat: 6.0880902007, lng: 100.3584139018 },
+  { name: "Aonic Kota Sarang Semut", lat: 5.9759138986, lng: 100.3937749711 },
+  { name: "Aonic Kepala Batas", lat: 5.5256794032, lng: 100.4308259153 },
+  { name: "Aonic Kerian", lat: 5.0125665488, lng: 100.5305211576 },
+  { name: "Aonic Teluk Intan", lat: 4.0139735915, lng: 101.0316674460 },
+  { name: "Aonic Langkap", lat: 4.0722952823, lng: 101.1476016288 },
+  { name: "Aonic Sungai Besar", lat: 3.6740000162, lng: 100.9831888288 },
+  { name: "Aonic Subang Jaya HQ", lat: 3.0478650300, lng: 101.5652323018 },
+  { name: "Aonic Mentakab", lat: 3.4834737897, lng: 102.351075 },
+  { name: "Aonic Pasir Puteh", lat: 5.8290422707, lng: 102.4036369153 },
+  { name: "Aonic Kuala Rompin", lat: 2.7993896145, lng: 103.4833416153 },
+  { name: "Aonic Kluang", lat: 1.9982103173, lng: 103.2946957846 },
+  { name: "Aonic Sandakan", lat: 5.8586073923, lng: 118.0738434153 },
+  { name: "Aonic Kota Samarahan", lat: 1.4559785686, lng: 110.4495206153 },
+  { name: "Aonic Kota Kinabalu", lat: 5.9998465261, lng: 116.1303424 }
+];
+
+let editPlaces = JSON.parse(JSON.stringify(places));
+
+// FUNGSI ENTER PADA KEYBOARD
+document.getElementById("placeInput").addEventListener("keypress", function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    findNearest();
+  }
+});
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function findNearest() {
+  const keyword = document.getElementById("placeInput").value.trim();
+  if (!keyword) return alert("Sila masukkan nama tempat");
+
+  const loading = document.getElementById("loading");
+  const output = document.getElementById("output");
+  const resultBody = document.getElementById("resultBody");
+  const resultTable = document.getElementById("resultTable");
+  const searchBtn = document.getElementById("searchBtn");
+
+  loading.style.display = "block";
+  output.innerHTML = "";
+  resultBody.innerHTML = "";
+  resultTable.style.display = "none";
+  searchBtn.disabled = true;
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=my&limit=7&q=${keyword}`
+    );
+    const data = await res.json();
+
+    if (!data.length) {
+      output.innerText = "Tiada lokasi di Malaysia dijumpai.";
+      return;
+    }
+
+    data.forEach((loc, index) => {
+      const userLat = parseFloat(loc.lat);
+      const userLng = parseFloat(loc.lon);
+
+      let nearest = null;
+      let minDist = Infinity;
+
+      places.forEach(p => {
+        const d = getDistance(userLat, userLng, p.lat, p.lng);
+        if (d < minDist) {
+          minDist = d;
+          nearest = p;
+        }
+      });
+
+      const negeri = loc.address.state || loc.address.region || loc.address.county || "-";
+      
+      // PAUTAN ARAH JALAN (DIRECTIONS)
+      const mapsLink = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${nearest.lat},${nearest.lng}`;
+
+      resultBody.innerHTML += `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${negeri}</td>
+          <td>${loc.display_name.split(",")[0]}</td>
+          <td><a href="${mapsLink}" target="_blank" title="Klik untuk Arah Jalan">🚗 Pandu</a></td>
+          <td><b>${nearest.name}</b></td>
+          <td>${minDist.toFixed(2)} km</td>
+        </tr>
+      `;
+    });
+
+    resultTable.style.display = "table";
+
+  } catch (err) {
+    output.innerText = "Ralat semasa carian.";
+  } finally {
+    loading.style.display = "none";
+    searchBtn.disabled = false;
+  }
+}
+
+function toggleEditor() {
+  const editor = document.getElementById("editor");
+  editor.style.display = editor.style.display === "none" ? "block" : "none";
+  renderEditor();
+}
+
+function renderEditor() {
+  const editorBody = document.getElementById("editorBody");
+  editorBody.innerHTML = "";
+  editPlaces.forEach((p, i) => {
+    editorBody.innerHTML += `
+      <tr>
+        <td><input value="${p.name}" oninput="editPlaces[${i}].name=this.value"></td>
+        <td><input type="number" step="any" value="${p.lat}" oninput="editPlaces[${i}].lat=parseFloat(this.value)"></td>
+        <td><input type="number" step="any" value="${p.lng}" oninput="editPlaces[${i}].lng=parseFloat(this.value)"></td>
+        <td><button class="btn-cancel" style="padding: 5px 10px;" onclick="deletePlace(${i})">✕</button></td>
+      </tr>`;
+  });
+}
+
+function addPlace() {
+  editPlaces.push({ name:"Cawangan Baru", lat:0, lng:0 });
+  renderEditor();
+}
+
+function deletePlace(i) {
+  if (confirm("Padam cawangan ini?")) {
+    editPlaces.splice(i,1);
+    renderEditor();
+  }
+}
+
+function savePlaces() {
+  places = JSON.parse(JSON.stringify(editPlaces));
+  localStorage.setItem("aonicPlaces", JSON.stringify(places));
+  alert("Data disimpan ✔️");
+}
+
+function resetPlaces() {
+  editPlaces = JSON.parse(JSON.stringify(places));
+  renderEditor();
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ms">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Kalkulator Drone Aonic Flex</title>
+
+    <style>
+        :root { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 850px; max-width: 100%; padding: 25px; }
+        h2 { margin-top: 0; color: #0b7285; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
+        .section { margin-top: 25px; }
+        .total-box { background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 20px; font-weight: 800; text-align: center; border: 2px solid #0b7285; color: #0b7285; margin-bottom: 20px; }
+        
+        /* Region Button Styling */
+        .region-container { margin-bottom: 25px; }
+        .region-label { font-size: 13px; font-weight: 700; color: #495057; margin-bottom: 10px; display: block; }
+        .region-btns { display: flex; gap: 10px; }
+        .btn-reg { flex: 1; padding: 12px; border: 2px solid #0b7285; background: #fff; color: #0b7285; font-weight: 700; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .btn-reg.active { background: #0b7285; color: #fff; }
+        
+        /* Form & Table */
+        label { font-size: 13px; font-weight: 700; color: #495057; display: block; margin-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
+        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: left; font-size: 14px; }
+        th { background: #f1f3f5; }
+        input[type="radio"], input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+        
+        /* Action Buttons */
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        button.main-btn { color: #fff; border: 0; border-radius: 6px; padding: 15px; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 15px; }
+        .btn-simple { background: #2b8a3e; }
+        .btn-simple:hover { background: #237032; }
+        .btn-admin { background: #0b7285; }
+        .btn-admin:hover { background: #085d6d; }
+        
+        /* Report Style */
+        .report-container { margin-top: 30px; border: 2px solid #2b8a3e; border-radius: 8px; overflow: hidden; }
+        .report-header { background: #2b8a3e; color: white; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .btn-copy-small { background: #fff; color: #2b8a3e; padding: 6px 15px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; font-weight: 700; }
+        #reportEditor { width: 100%; min-height: 400px; padding: 20px; box-sizing: border-box; white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.5; outline: none; background: #fafafa; }
+        .copy-hint { font-size: 12px; color: #666; font-style: italic; margin-top: 5px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Mist Drone Aonic Flex Calculator</h2>
+
+    <div class="region-container">
+        <span class="region-label">PILIH WILAYAH JUALAN:</span>
+        <div class="region-btns">
+            <button id="btnSem" class="btn-reg active" onclick="setRegion('semenanjung')">SEMENANJUNG</button>
+            <button id="btnBor" class="btn-reg" onclick="setRegion('borneo')">BORNEO (SBH/SRW)</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <label>1. Pilih Pakej Utama</label>
+        <table>
+            <thead>
+                <tr><th style="width:50px">Pilih</th><th>Model Drone</th><th>Harga (RM)</th></tr>
+            </thead>
+            <tbody id="productBody"></tbody>
+        </table>
+    </div>
+
+    <div id="addonSection" class="section" style="display:none">
+        <label>2. Tambah Aksesori</label>
+        <table>
+            <thead>
+                <tr><th style="width:50px">Pilih</th><th>Nama Aksesori</th><th>Harga (RM)</th></tr>
+            </thead>
+            <tbody id="addons"></tbody>
+        </table>
+    </div>
+
+    <div class="section total-box">
+        TOTAL HARGA: RM <span id="totalPrice">0.00</span>
+    </div>
+
+    <div class="btn-group">
+        <button class="main-btn btn-simple" onclick="generateReport(false)">Generate Report Biasa</button>
+        <button class="main-btn btn-admin" onclick="generateReport(true)">Generate Report + Admin Fee</button>
+    </div>
+
+    <div id="reportWrapper" style="display:none">
+        <div class="report-container">
+            <div class="report-header">
+                <span id="reportTitle">Kiraan Ready</span>
+                <button class="btn-copy-small" onclick="copyToClipboard()">Salin Semua</button>
+            </div>
+            <div id="reportEditor" contenteditable="true"></div>
+        </div>
+        <p class="copy-hint">Tip: Klik "Salin Semua" & paste terus ke WhatsApp pelanggan.</p>
+        <p class="copy-hint">Sistem dikemaskini pada: 16 Januari 2026</p>
+    </div>
+</div>
+
+<script>
+let currentRegion = 'semenanjung';
+let currentProductId = null;
+let basePrice = 0;
+let selectedModel = "";
+
+const data = {
+    semenanjung: {
+        1: { name: "Mist Nex 6", price: 13999, addons: {"Bateri x2":1699, "Bateri x4":3398, "Bateri x4 + 1 Charger":4899, "Set Nozzle Centrifugal":579, "Genset":3000} },
+        2: { name: "Mist Nex 20", price: 19999, addons: {"Bateri x2":3699, "Bateri x4":7398, "Bateri x4 + 1 Charger":9429, "Sistem Taburan":2900, "Genset":3000} },
+        3: { name: "Mist Tec 50", price: 37999, addons: {"Bateri x2":8799, "Bateri x4":17598, "Bateri x4 + 1 Charger":20149, "Set Nozzle Centrifugal":2400, "Sistem Taburan":3199, "RTK System":8000} }
+    },
+    borneo: {
+        1: { name: "Mist Nex 6", price: 14999, addons: {"Bateri x2":1799, "Bateri x4":3598, "Bateri x4 + 1 Charger":4999, "Set Nozzle Centrifugal":589, "Genset":4000} },
+        2: { name: "Mist Nex 20", price: 20999, addons: {"Bateri x2":3799, "Bateri x4":7598, "Bateri x4 + 1 Charger":9439, "Sistem Taburan":3000, "Genset":4000} },
+        3: { name: "Mist Tec 50", price: 39999, addons: {"Bateri x2":9299, "Bateri x4":18598, "Bateri x4 + 1 Charger":20649, "Sistem Taburan":3399, "Set Nozzle Centrifugal":2600} }
+    }
+};
+
+function setRegion(reg) {
+    currentRegion = reg;
+    document.getElementById('btnSem').classList.toggle('active', reg === 'semenanjung');
+    document.getElementById('btnBor').classList.toggle('active', reg === 'borneo');
+    
+    if (currentProductId) {
+        selectProduct(currentProductId);
+    } else {
+        renderProducts();
+    }
+}
+
+function renderProducts() {
+    const body = document.getElementById("productBody");
+    body.innerHTML = "";
+    const products = data[currentRegion];
+    for (let id in products) {
+        body.innerHTML += `
+            <tr>
+                <td><input type="radio" name="product" onclick="selectProduct(${id})" ${currentProductId == id ? 'checked' : ''}></td>
+                <td>${products[id].name}</td>
+                <td>${products[id].price.toLocaleString()}</td>
+            </tr>`;
+    }
+}
+
+function selectProduct(id) {
+    currentProductId = id;
+    const product = data[currentRegion][id];
+    basePrice = product.price;
+    selectedModel = product.name;
+
+    renderProducts();
+    document.getElementById("addonSection").style.display = "block";
+    const addonsDiv = document.getElementById("addons");
+    addonsDiv.innerHTML = "";
+
+    for (let a in product.addons) {
+        addonsDiv.innerHTML += `
+            <tr>
+                <td><input type="checkbox" class="addon-cb" data-name="${a}" value="${product.addons[a]}" onchange="calculateTotal()"></td>
+                <td>${a}</td>
+                <td>${product.addons[a].toLocaleString()}</td>
+            </tr>`;
+    }
+    calculateTotal();
+}
+
+function calculateTotal() {
+    let total = basePrice;
+    document.querySelectorAll('.addon-cb:checked').forEach(cb => {
+        total += Number(cb.value);
+    });
+    document.getElementById("totalPrice").innerText = total.toLocaleString(undefined, {minimumFractionDigits: 2});
+}
+
+function rm(x) { return 'RM ' + x.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+
+function getPlanDetails(price, plan) {
+    let depPct=0, adminPct=0, period=1, label="";
+    if(plan==="12_month"){depPct=20;adminPct=5;period=12;label="12 BULAN";}
+    else if(plan==="18_month"){depPct=30;adminPct=7.5;period=18;label="18 BULAN";}
+    else if(plan==="24_month"){depPct=40;adminPct=10;period=24;label="24 BULAN";}
+    else if(plan==="2_season"){depPct=50;adminPct=5;period=2;label="2 MUSIM";}
+    else if(plan==="4_season"){depPct=50;adminPct=10;period=4;label="4 MUSIM";}
+
+    const deposit = price * depPct / 100;
+    const balance = price - deposit;
+    const admin = balance * adminPct / 100;
+    const total = balance + admin;
+    const per = total / period;
+    return { label, depPct, deposit, balance, adminPct, admin, total, per, period };
+}
+
+function generateReport(withAdmin) {
+    const price = Number(document.getElementById("totalPrice").innerText.replace(/,/g, ''));
+    if(!price || !selectedModel) { alert("Sila pilih model drone dahulu."); return; }
+
+    let chosen = [];
+    document.querySelectorAll('.addon-cb:checked').forEach(cb => chosen.push(cb.getAttribute('data-name')));
+    
+    let report = `*KIRAAN ANSURAN MIST DRONE*\n`;
+    report += `WILAYAH: ${currentRegion.toUpperCase()}\n`;
+    report += `--------------------------------\n`;
+    report += `Model: ${selectedModel}\n`;
+    report += `Aksesori: ${chosen.length > 0 ? chosen.join(", ") : "Tiada"}\n`;
+    report += `*HARGA PAKEJ: ${rm(price)}*\n\n`;
+    
+    report += `*STRUKTUR ANSURAN*\n`;
+    report += `--------------------------------\n`;
+
+    const plans = ["12_month", "18_month", "24_month", "2_season", "4_season"];
+    plans.forEach(p => {
+        const d = getPlanDetails(price, p);
+        const unit = p.includes("month") ? "bulan" : "musim";
+        report += `\n*PELAN ${d.label}*\n`;
+        report += `• Deposit (${d.depPct}%): ${rm(d.deposit)}\n`;
+        if(withAdmin) {
+            report += `• Baki Dibiayai: ${rm(d.balance)}\n`;
+            report += `• Kos Admin (${d.adminPct}%): ${rm(d.admin)}\n`;
+        }
+        report += `• Bayaran: ${rm(d.per)} /${unit}\n`;
+    });
+
+    report += `\n--------------------------------\n`;
+    report += `*Nota:* Kiraan untuk rujukan awal sahaja. Tertakluk kepada terma & syarat semasa.\n`;
+
+    document.getElementById("reportTitle").innerText = withAdmin ? "Quotation + Admin Fee" : "Quotation Biasa";
+    document.getElementById("reportEditor").innerText = report;
+    document.getElementById("reportWrapper").style.display = "block";
+    document.getElementById("reportWrapper").scrollIntoView({behavior: "smooth"});
+}
+
+function copyToClipboard() {
+    const editor = document.getElementById("reportEditor");
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.execCommand('copy');
+    
+    const btn = document.querySelector('.btn-copy-small');
+    btn.innerText = "Dah Salin! ✔️";
+    setTimeout(() => { btn.innerText = "Salin Semua"; }, 2000);
+}
+
+// Init
+renderProducts();
+</script>
+
+</body>
+</html>

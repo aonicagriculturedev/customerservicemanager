@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aonic CS Management v2.0</title>
+    <style>
+        :root { --primary: #3498db; --success: #2b8a3e; --bg: #f0f2f5; --accent: #9b59b6; --danger: #e74c3c; --edit: #f39c12; --dark: #2c3e50; --copy-img: #607d8b; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); padding: 15px; margin: 0; display: flex; justify-content: center; padding-bottom: 80px; }
+        .main-container { width: 100%; max-width: 500px; }
+        h1 { font-size: 1.1rem; color: #333; text-align: center; margin-bottom: 15px; }
+        
+        .cat-header-wrapper { 
+    display: flex; 
+    align-items: center; 
+    border-bottom: 1px solid #ddd; 
+    margin: 10px 0 5px; 
+    padding-bottom: 2px; 
+}
+
+h2 { 
+    font-size: 0.8rem; 
+    margin: 0; 
+    color: #777; 
+    text-transform: uppercase; 
+    /* Jangan letak flex-grow di sini */
+}
+        .btn-rename-cat { display: none; font-size: 9px; background: var(--edit); color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
+        .admin-mode-on .btn-rename-cat { display: inline-block; }
+
+        .button-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 5px; }
+        button.place-btn { 
+            width: 100%; padding: 12px 2px; border: none; border-radius: 6px; cursor: pointer; 
+            font-size: 11px; background: var(--primary); color: white; font-weight: 600; 
+            min-height: 40px; display: flex; align-items: center; justify-content: center;
+        }
+
+        .report-container { 
+            position: sticky; top: 5px; z-index: 1000; margin-bottom: 15px; 
+            border: 2px solid var(--success); border-radius: 8px; overflow: hidden; 
+            background: white; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            max-height: 85vh; flex-direction: column;
+        }
+        .report-header { background: var(--success); color: white; padding: 8px 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        
+        .report-actions { display: flex; gap: 5px; background: #f9f9f9; padding: 8px; border-bottom: 1px solid #ddd; }
+        .btn-action { flex: 1; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; color: white; }
+        .btn-copy-all { background: var(--success); }
+
+        #reportEditor { width: 100%; padding: 12px; box-sizing: border-box; white-space: pre-wrap; font-size: 14px; outline: none; background: #fff; overflow-y: auto; max-height: 250px; }
+
+        .img-grid-viewer { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; padding: 10px; background: #eee; border-top: 1px solid #ddd; }
+        .img-grid-viewer img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
+
+        .action-links { font-size: 10px; text-align: center; margin-top: 2px; display: none; }
+        .admin-mode-on .action-links { display: block; margin-bottom: 8px; }
+        .del-link { color: var(--danger); cursor: pointer; margin: 0 5px; text-decoration: underline; }
+        .edit-link { color: var(--edit); cursor: pointer; margin: 0 5px; text-decoration: underline; font-weight: bold; }
+
+        .admin-section { margin-top: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ccc; display: none; }
+        .admin-section input, .admin-section textarea { width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 13px; }
+        .btn-save { background: #4CBD9C; color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        .image-upload-area { border: 2px dashed #ccc; padding: 10px; text-align: center; margin-bottom: 10px; border-radius: 5px; }
+        .remove-img-btn { background: var(--danger); color: white; border: none; padding: 5px 10px; font-size: 10px; border-radius: 3px; cursor: pointer; display: none; margin: 10px auto 0; }
+        
+        .toggle-container { text-align: center; margin-top: 30px; }
+        .btn-toggle-admin { background: white; color: #666; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        
+        /*LINK modifier*/
+        /* Container yang lebih bersih */
+.quick-links-wrapper { 
+    display: flex; 
+    gap: 8px; 
+    justify-content: center; 
+    padding: 20px 0; 
+    margin-top: 20px; 
+    border-top: 1px dashed #ccc; 
+}
+
+/* Gaya Butang (Sama seperti Top Controls) */
+.quick-btn { 
+    text-decoration: none; 
+    padding: 5px 5px; 
+    background: white; /* Latar belakang putih */
+    color: #666; /* Warna teks kelabu */
+    font-size: 10px; 
+    font-weight: bold; 
+    border-radius: 20px; /* Round shape macam butang atas */
+    border: 1px solid #ccc; /* Border nipis */
+    flex: 1; 
+    text-align: center; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    min-height: 2px;
+}
+
+/* Warna border mengikut fungsi (soft version) */
+.contact-btn { border-color: #2b8a3e; color: #2b8a3e; }
+.calc-btn { border-color: #3498db; color: #3498db; }
+.agri-leads { border-color: #9b59b6; color: #9b59b6; }
+
+/* Kesan bila ditekan */
+.quick-btn:active {
+    background: #f5f5f5;
+    transform: scale(0.98);
+}
+ /*LINK modifier sampai sini*/
+ 
+        .img-item-wrapper { position: relative; width: 100%; height: 120px; }
+        .img-item-wrapper img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
+        .btn-copy-overlay { 
+            position: absolute; top: 5px; right: 5px; 
+            background: rgba(0, 0, 0, 0.6); color: white; border: none; 
+            padding: 4px 8px; border-radius: 4px; font-size: 9px; 
+            cursor: pointer; font-weight: bold; backdrop-filter: blur(2px);
+        }
+
+/* Sembunyikan secara default */
+.admin-only-inline { 
+    display: none !important; 
+}
+
+
+
+
+        /* Hanya tunjuk apabila Admin Mode ON */
+.admin-mode-on .admin-only-inline { 
+    display: inline-block !important; 
+    width: 18px; 
+    height: 18px; 
+    border: none; 
+    padding: 0; 
+    background: none; 
+    cursor: pointer;
+    vertical-align: middle;
+}
+        
+        
+/* Tambah ini dalam <style> */
+/* Tambah dalam <style> */
+.cat-sort-btns { display: none; gap: 5px; margin-right: 10px; }
+.admin-mode-on .cat-sort-btns { display: flex; }
+.btn-sort { 
+    background: #95a5a6; color: white; border: none; 
+    padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; 
+}
+.btn-sort:hover { background: #7f8c8d; }
+/* Susunan Asal (Mobile / Default) */
+body { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    padding: 15px; 
+}
+
+.main-container { 
+    width: 100%; 
+    max-width: 500px; 
+}
+
+.report-container { 
+    width: 100%; 
+    max-width: 500px; 
+    display: none; 
+    margin-top: 20px; 
+}
+
+/* --- KEMAS KINI CSS UNTUK LAYOUT KANAN --- */
+body.desktop-active {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 30px;
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+body.desktop-active .main-container {
+    flex: 1;
+    max-width: 500px;
+    margin: 0;
+}
+
+/* Panel Admin di sebelah kanan */
+body.desktop-active .admin-section {
+    flex: 0 0 380px; 
+    margin-top: 55px; 
+    position: sticky;
+    top: 20px;
+}
+
+/* Container butang kawalan di atas */
+.top-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.admin-mode-on .admin-section {
+    display: block !important;
+}
+
+.toggle-container { display: none; } /* Sembunyikan butang bawah yang lama */
+
+/* Styling untuk Popup Preview */
+/* Gaya Modal Preview yang ditambah baik */
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.95);
+    overflow-y: auto; /* Aktifkan skrol menegak */
+    overflow-x: hidden;
+    cursor: zoom-out;
+    -webkit-overflow-scrolling: touch; /* Skrol lancar untuk iOS */
+}
+
+  
+  
+  .modal-content-wrapper {
+    display: block; /* Tukar dari flex ke block untuk skrol yang lebih stabil */
+    padding: 100px; /* Beri ruang ekstra luas di sekeliling imej untuk drag */
+    min-height: 100vh;
+    min-width: 100vw;
+    box-sizing: border-box;
+}
+
+#modalImg {
+    display: block;
+    margin: auto;
+    width: auto;
+    max-width: 95%;     /* Fit Screen asal */
+    max-height: 85vh;   /* Fit Screen asal */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: zoom-in;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+#modalImg.zoomed {
+    max-height: none;   /* Benarkan saiz asal */
+    max-width: none;    /* Benarkan saiz asal */
+    width: 150%;        /* Paksa imej jadi lebih besar dari skrin untuk tujuan drag */
+    cursor: grab;
+    transform: scale(1); 
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+}
+
+#modalImg.zoomed:active {
+    cursor: grabbing;
+}
+  
+  
+  /* Tambah dalam <style> */
+.import-controls {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+}
+.btn-select-toggle {
+    background: none;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-select-toggle:hover {
+    background: var(--primary);
+    color: white;
+}
+  
+   /* Data management toggle */
+  .advanced-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 10px;
+    margin-top: 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: bold;
+    color: #666;
+    border: 1px solid #eee;
+}
+
+.advanced-content {
+    display: none; /* Hide by default */
+    padding: 10px;
+    border: 1px solid #eee;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    background: #fff;
+}
+
+.advanced-toggle:hover { background: #e9ecef; }
+
+
+
+/* Butang Pangkah Terapung (Sticky) */
+.close-preview {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #e74c3c;
+    color: white;
+    border: 3px solid white; /* Tambah border putih sedikit supaya nampak kontra */
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 22px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-bottom: 4px; /* Adjust sikit untuk centering huruf '×' */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    z-index: 10001;
+}
+
+
+/* Styling untuk Modal Import Preview */
+.import-modal {
+    display: none;
+    position: fixed;
+    z-index: 10002;
+    left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.import-content {
+    background: white;
+    width: 95%;
+    max-width: 480px;
+    max-height: 85vh;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+.import-header { 
+    background: #2c3e50; color: white; padding: 18px; 
+    font-weight: 800; text-align: center; font-size: 1rem;
+    letter-spacing: 1px;
+}
+.import-body { padding: 10px; overflow-y: auto; flex-grow: 1; background: #f8f9fa; }
+
+/* Grouping Style */
+.import-group-header {
+    background: #e9ecef;
+    padding: 6px 12px;
+    font-weight: bold;
+    font-size: 11px;
+    color: #495057;
+    border-radius: 6px;
+    margin: 10px 0 5px 0;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+}
+.import-item { 
+    display: flex; 
+    align-items: flex-start; 
+    gap: 12px; 
+    padding: 12px; 
+    background: white; 
+    margin-bottom: 6px; 
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.import-info { flex-grow: 1; overflow: hidden; }
+.import-label { font-weight: bold; font-size: 13px; color: #2c3e50; display: block; margin-bottom: 2px; }
+.import-snippet { 
+    font-size: 11px; 
+    color: #7f8c8d; 
+    display: block; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    font-style: italic;
+}
+
+.import-item:hover { border-color: var(--primary); background: #f0f7ff; }
+.import-item input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+
+.badge { padding: 3px 8px; border-radius: 50px; font-size: 9px; font-weight: 800; color: white; }
+.badge-new { background: #27ae60; box-shadow: 0 2px 6px rgba(39,174,96,0.3); }
+.badge-dup { background: #f39c12; box-shadow: 0 2px 6px rgba(243,156,18,0.3); }
+
+.import-footer { padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 12px; }
+.btn-confirm { background: #27ae60; color: white; border: none; flex: 2; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+.btn-cancel { background: #f1f3f5; color: #495057; border: none; flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }    
+
+
+
+/* Adjust overlay buttons layout */
+.overlay-controls {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: flex;
+    gap: 4px;
+}
+
+.btn-preview-overlay {
+    background: #BEBEBE;
+    color: black;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 9px;
+    cursor: pointer;
+    font-weight: bold;
+    backdrop-filter: blur(2px);
+}
+
+    @media (max-width: 360px) { .button-container { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body id="mainBody" class="desktop-active">
+  
+    <div id="reportWrapper" class="report-container">
+        <div class="report-header"><span id="statusText">Mesej Sedia ⚡</span></div>
+        <div class="report-actions">
+            <button class="btn-action btn-copy-all" id="copyAllBtn" onclick="copyToClipboard()">Copy Text</button>
+        </div>
+        <div id="reportEditor" contenteditable="true"></div>
+        <div id="imgDisplay" class="img-grid-viewer"></div>
+        <button onclick="document.getElementById('reportWrapper').style.display='none'" style="border:none; background:#eee; padding:10px; font-size:11px; cursor:pointer; width:100%;">> Close This Window <</button>
+    </div>
+
+    <div class="main-container">
+        <h1>Aonic CS Manager v2.0</h1>
+        
+        <div class="top-controls">
+            <button id="viewToggleButton" onclick="toggleDesktopMode()" style="padding: 8px 15px; border-radius: 20px; border: 1px solid #3498db; cursor: pointer; font-size: 11px; font-weight: bold; background: white; color: #3498db;">
+                Now showing: Mobile Mode
+            </button>
+            <button class="btn-toggle-admin" id="toggleBtn" onclick="toggleManagement()" style="padding: 8px 15px; border-radius: 20px; border: 1px solid #666; cursor: pointer; font-size: 11px; font-weight: bold; background: white; color: #666;">
+                ⚙️ Data Management
+            </button>
+        </div>
+
+<div class="quick-links-wrapper">
+    
+    <a href="Calculator Aonic Flex V2/index.html" target="_blank" class="quick-btn calc-btn">
+        Calc Mist Drone 
+    </a>
+    <a href="locationBranches/cariLokasi/index.html" target="_blank" class="quick-btn agri-leads">
+        Cari Lokasi Terdekat
+    </a>
+    <a href="contactBranches/index.html" target="_blank" class="quick-btn contact-btn">
+        Branches Info
+    </a>
+    <a href="https://poladrone1outlook.sharepoint.com/:x:/s/SalesAdmin/IQA6N8iNKWVaTYz-DN_B1_JKAVowD2VlUV5--i0r7m-YHKc?e=DQsOcJ" target="_blank" class="quick-btn agri-leads">
+        Agri Leads Excel
+    </a>
+    
+</div>
+        
+        
+        
+        <div id="buttonArea"></div>
+
+
+
+
+        
+    </div>
+
+    <div class="admin-section" id="adminPanel">
+        <h3 style="font-size: 0.8rem; margin: 0 0 10px 0;">MESSAGE EDITOR (Add New/Edit)</h3>
+        <input type="text" id="newCat" list="catList" placeholder="Category">
+        <datalist id="catList"></datalist>
+        <input type="text" id="newLabel" placeholder="Button Label">
+        
+        <div class="image-upload-area">
+            <label style="font-size: 11px; display: block; margin-bottom: 5px; color: #666;">Insert Image (max 10)</label>
+            <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImageUpload(this)">
+            <div id="imgPreviewContainer" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px;"></div>
+            <button id="removeImgBtn" class="remove-img-btn" onclick="clearImage()">DELETE IMAGES 🗑️</button>
+        </div>
+
+        <textarea id="newMsg" rows="5" placeholder="Your message here..."></textarea>
+        <button class="btn-save" id="saveBtn" onclick="saveToDB()">Save New Message</button>
+        <button id="cancelEditBtn" style="display:none; background:#eee; border:none; width:100%; padding:8px; border-radius:5px; cursor:pointer; font-size:11px; margin-top:5px;" onclick="resetForm()">Cancel Edit</button>
+
+        <div class="advanced-toggle" onclick="toggleAdvancedSettings()">
+    <span>🛠 Data Manager (Backup/Import)   </span>
+    <span id="advArrow">▼</span>
+</div>
+
+<div id="advancedContent" class="advanced-content">
+    <button class="btn-save" style="background:#555; font-size:10px; padding:8px;" onclick="exportData()">⬇️ BACKUP ALL</button>
+    
+    <button class="btn-save" style="background:#777; font-size:10px; padding:8px; margin-top:5px;" onclick="document.getElementById('importFile').click()">⬆️ UPLOAD BACKUP</button>
+    <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
+    
+    <button class="btn-save" style="background:#f39c12; font-size:10px; padding:8px; margin-top:10px;" onclick="clearAppCache()">🧹 CLEAR CACHE</button>
+    
+    <button class="btn-save" style="background:var(--danger); font-size:10px; padding:8px; margin-top:20px;" onclick="resetAllData()">⚠️ CLEAR ALL DATA</button>
+</div>
+
+<p style="font-size: 10px; color: #999; text-align: center; margin-top: 15px;">Last Update: 20 Jan 2026 by Muin</p>
+    </div>
+
+<script>
+let dbData = {}; 
+const DB_NAME = "Aonic_Pro_DB";
+const STORE_NAME = "Messages";
+let editTargetId = null;
+let isAdminVisible = false;
+let currentImages = [];
+
+
+
+
+// 1. INIT DATABASE
+function initDB() {
+  
+  
+    return new Promise((resolve) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+        request.onsuccess = (e) => {
+            const db = e.target.result;
+            const transaction = db.transaction(STORE_NAME, "readonly");
+            const store = transaction.objectStore(STORE_NAME);
+            const getReq = store.get("main_data");
+            getReq.onsuccess = () => {
+                dbData = getReq.result || {};
+                renderButtons();
+                resolve();
+            };
+        };
+    });
+}
+
+// 2. SAVE DATABASE
+function saveToIndexedDB() {
+    return new Promise((resolve) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onsuccess = (e) => {
+            const db = e.target.result;
+            const transaction = db.transaction(STORE_NAME, "readwrite");
+            const store = transaction.objectStore(STORE_NAME);
+            store.put(dbData, "main_data");
+            transaction.oncomplete = () => resolve();
+        };
+    });
+}
+
+
+// 3. CORE LOGIC
+async function saveToDB() {
+    const cat = document.getElementById('newCat').value.trim();
+    const label = document.getElementById('newLabel').value.trim();
+    const msg = document.getElementById('newMsg').value;
+    if(!cat || !label || !msg) return alert("Data not complete!");
+
+    if (editTargetId) {
+        for (let c in dbData) {
+            dbData[c] = dbData[c].filter(i => i.id !== editTargetId);
+            if (dbData[c].length === 0) delete dbData[c];
+        }
+    }
+    if(!dbData[cat]) dbData[cat] = [];
+    dbData[cat].push({ id: editTargetId || Date.now(), label, text: msg, images: [...currentImages] });
+
+    await saveToIndexedDB();
+    resetForm(); 
+    renderButtons();
+    alert("Data Saved! ✅");
+}
+
+function renderButtons() {
+    const area = document.getElementById('buttonArea');
+    area.innerHTML = '';
+    const list = document.getElementById('catList');
+    
+    const categories = Object.keys(dbData);
+    list.innerHTML = categories.map(c => `<option value="${c}">`).join('');
+
+    // Warna asal sebagai backup jika kategori baru belum ada warna
+    const defaultColors = ['#9A7ADC', '#6384E7', '#55ADD8', '#4CBD9C', '#86D21A', '#E05B40', '#D6593F', '#BA424B'];
+    let colorIndex = 0;
+
+    categories.forEach((category) => {
+        const items = dbData[category];
+        if (!items || !items.length) return;
+
+        items.sort((a, b) => {
+            return a.label.localeCompare(b.label, undefined, { 
+                numeric: true, 
+                sensitivity: 'base' 
+            });
+        });
+
+        // --- LOGIK WARNA TETAP ---
+        // Jika item sudah ada catColor, guna warna itu. Jika tiada, guna warna dari defaultColors.
+        const currentColor = items[0].catColor || defaultColors[colorIndex % defaultColors.length];
+        
+        // Pastikan semua item dalam kategori ini ada warna yang sama dalam memory sementara
+        items.forEach(it => it.catColor = currentColor);
+
+        const header = document.createElement('div');
+        header.className = 'cat-header-wrapper';
+
+        header.innerHTML = `
+            <h2 style="color: ${currentColor}; margin: 0;">${category}</h2>
+            
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                <input type="color" 
+                       class="admin-only-inline" 
+                       value="${currentColor}" 
+                       onchange="changeCategoryColor('${category}', this.value)" 
+                       style="width:18px; height:18px; border:none; padding:0; background:none; cursor:pointer;">
+
+                <button class="btn-rename-cat" onclick="renameCategory('${category}')">Rename</button>
+                
+                <div class="cat-sort-btns"> 
+                    <button class="btn-sort" onclick="moveCategory('${category}', -1)">↑</button>
+                    <button class="btn-sort" onclick="moveCategory('${category}', 1)">↓</button>
+                </div>
+            </div>
+        `;
+        area.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'button-container';
+        
+        items.forEach(item => {
+            const wrap = document.createElement('div');
+            wrap.innerHTML = `
+                <button class="place-btn" style="background-color: ${currentColor}" onclick="viewMessage('${category}', ${item.id})">
+                    ${item.label}
+                </button>
+                <div class="action-links">
+                    <span class="edit-link" onclick="editMessage('${category}', ${item.id})">Edit</span>
+                    <span class="del-link" onclick="deleteMessage('${category}', ${item.id})">Delete</span>
+                </div>`;
+            grid.appendChild(wrap);
+        });
+        
+        area.appendChild(grid);
+        colorIndex++; // colorIndex hanya diguna jika item benar-benar baru
+    });
+}
+
+
+//togle advance data managing
+function toggleAdvancedSettings() {
+    const content = document.getElementById('advancedContent');
+    const arrow = document.getElementById('advArrow');
+    
+    if (content.style.display === "block") {
+        content.style.display = "none";
+        arrow.innerText = "▼";
+    } else {
+        content.style.display = "block";
+        arrow.innerText = "▲";
+    }
+}
+
+
+
+
+// Fungsi untuk susunan custom kategori (Up/Down)
+async function moveCategory(category, direction) {
+    const keys = Object.keys(dbData);
+    const index = keys.indexOf(category);
+    const newIndex = index + direction;
+
+    if (newIndex >= 0 && newIndex < keys.length) {
+        // Swap kedudukan dalam array
+        const temp = keys[index];
+        keys.splice(index, 1);
+        keys.splice(newIndex, 0, temp);
+
+        // Bina semula dbData mengikut susunan baru
+        const newData = {};
+        keys.forEach(k => { newData[k] = dbData[k]; });
+        
+        dbData = newData;
+        await saveToIndexedDB();
+        renderButtons();
+    }
+}
+
+
+
+// 4. UI FUNCTIONS
+function viewMessage(cat, id) {
+    const item = dbData[cat].find(i => i.id === id);
+    document.getElementById('reportEditor').innerText = item.text;
+    const imgDisp = document.getElementById('imgDisplay');
+    imgDisp.innerHTML = '';
+    if (item.images && item.images.length) {
+        item.images.forEach(src => {
+    const d = document.createElement('div');
+    d.className = 'img-item-wrapper';
+    d.innerHTML = `
+        <img src="${src}">
+        <div class="overlay-controls">
+            <button class="btn-preview-overlay" onclick="openPreview('${src}')">🔍 VIEW</button>
+            <button class="btn-copy-overlay" style="position:static;" onclick="copyIndividualImage('${src}', this)">COPY 🖼️</button>
+        </div>`;
+    imgDisp.appendChild(d);
+});
+
+        imgDisp.style.display = 'grid';
+    } else { imgDisp.style.display = 'none'; }
+    document.getElementById('reportWrapper').style.display = 'flex';
+    setTimeout(() => copyToClipboard(), 200);
+}
+
+function editMessage(cat, id) {
+    const item = dbData[cat].find(i => i.id === id);
+    document.getElementById('newCat').value = cat;
+    document.getElementById('newLabel').value = item.label;
+    document.getElementById('newMsg').value = item.text;
+    currentImages = [...(item.images || [])];
+    renderPreviews();
+    editTargetId = id;
+    document.getElementById('saveBtn').innerText = "UPDATE";
+    document.getElementById('cancelEditBtn').style.display = 'block';
+    document.getElementById('adminPanel').scrollIntoView();
+}
+
+async function deleteMessage(cat, id) {
+    if(confirm("Delete?")) {
+        dbData[cat] = dbData[cat].filter(i => i.id !== id);
+        if(!dbData[cat].length) delete dbData[cat];
+        await saveToIndexedDB();
+        renderButtons();
+    }
+}
+
+async function renameCategory(oldName) {
+    const newName = prompt("Nama baru:", oldName);
+    
+    // Jika user batal atau masukkan nama yang sama, jangan buat apa-apa
+    if (!newName || newName === oldName) return;
+
+    // Bina objek baru untuk mengekalkan turutan (original order)
+    const newData = {};
+    
+    Object.keys(dbData).forEach(key => {
+        if (key === oldName) {
+            // Tukar nama kategori, tapi kekal di posisi yang sama
+            // Pastikan semua item di bawahnya juga dikemaskini (termasuk warna)
+            newData[newName] = dbData[oldName];
+        } else {
+            newData[key] = dbData[key];
+        }
+    });
+
+    // Kemaskini database global
+    dbData = newData;
+    
+    await saveToIndexedDB();
+    renderButtons();
+    alert(`Category "${oldName}" telah ditukar kepada "${newName}" ✅`);
+}
+
+async function changeCategoryColor(category, newColor) {
+    if (dbData[category]) {
+        // Simpan warna baru ke dalam setiap item dalam kategori tersebut
+        dbData[category] = dbData[category].map(item => ({
+            ...item,
+            catColor: newColor
+        }));
+        
+        await saveToIndexedDB();
+        renderButtons(); 
+    }
+}
+
+
+   function openPreview(src) {
+       const modal = document.getElementById('imageModal');
+      const modalImg = document.getElementById('modalImg');
+       modalImg.src = src;
+       modal.style.display = 'flex';
+  }
+
+function closePreview() {
+    document.getElementById('imageModal').style.display = 'none';
+}
+
+// 5. UTILS
+function handleImageUpload(el) {
+    Array.from(el.files).forEach(f => {
+        const r = new FileReader();
+        r.onload = (e) => { currentImages.push(e.target.result); renderPreviews(); };
+        r.readAsDataURL(f);
+    });
+}
+function renderPreviews() {
+    document.getElementById('imgPreviewContainer').innerHTML = currentImages.map(i => `<img src="${i}" style="width:100%; height:40px; object-fit:cover;">`).join('');
+    document.getElementById('removeImgBtn').style.display = currentImages.length ? 'block' : 'none';
+}
+function clearImage() { currentImages = []; renderPreviews(); }
+function resetForm() {
+    document.getElementById('newCat').value = ''; document.getElementById('newLabel').value = '';
+    document.getElementById('newMsg').value = ''; clearImage();
+    editTargetId = null; document.getElementById('saveBtn').innerText = "Save New Message";
+    document.getElementById('cancelEditBtn').style.display = 'none';
+}
+function toggleManagement() {
+    isAdminVisible = !isAdminVisible;
+    const adminPanel = document.getElementById('adminPanel');
+    const toggleBtn = document.getElementById('toggleBtn');
+    
+    adminPanel.style.display = isAdminVisible ? 'block' : 'none';
+    document.getElementById('mainBody').classList.toggle('admin-mode-on', isAdminVisible);
+    
+    // Tukar gaya butang
+    if (isAdminVisible) {
+        toggleBtn.style.background = "#333";
+        toggleBtn.style.color = "#fff";
+    } else {
+        toggleBtn.style.background = "white";
+        toggleBtn.style.color = "#666";
+    }
+    
+    renderButtons();
+}
+function copyToClipboard() {
+    const r = document.createRange(); r.selectNodeContents(document.getElementById("reportEditor"));
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    document.execCommand('copy');
+    document.getElementById('statusText').innerText = "Copied! ✔️";
+    setTimeout(() => document.getElementById('statusText').innerText = "Message Ready ⚡", 1000);
+}
+async function copyIndividualImage(src, btn) {
+    const res = await fetch(src); const b = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({[b.type]: b})]);
+    btn.innerText = "OK!"; setTimeout(() => btn.innerText = "COPY 🖼️", 1000);
+}
+function exportData() {
+    const b = new Blob([JSON.stringify(dbData)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+    a.download = "backup.json"; a.click();
+}
+let pendingImportData = null;
+
+function importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const r = new FileReader();
+    r.onload = (ev) => {
+        try {
+            const importedData = JSON.parse(ev.target.result);
+            showImportPreview(importedData);
+        } catch (err) {
+            alert("Fail tidak sah!");
+        }
+    };
+    r.readAsText(file);
+    e.target.value = ''; // Reset input
+}
+
+function showImportPreview(newData) {
+    pendingImportData = newData;
+    const listContainer = document.getElementById('importList');
+    listContainer.innerHTML = '';
+    
+    window.tempImportList = [];
+    let globalIndex = 0;
+
+    for (let cat in newData) {
+        const groupHeader = document.createElement('div');
+        groupHeader.className = 'import-group-header';
+        groupHeader.innerHTML = `<span>📁 CATEGORY: ${cat}</span>`;
+        listContainer.appendChild(groupHeader);
+
+        newData[cat].forEach(item => {
+            // Logik Duplicate: Check Kategori + Label + Mesej Content
+            let isExactDuplicate = false;
+            if (dbData[cat]) {
+                isExactDuplicate = dbData[cat].some(localItem => 
+                    localItem.label === item.label && 
+                    localItem.text === item.text
+                );
+            }
+
+            window.tempImportList.push({ ...item, category: cat });
+
+            const div = document.createElement('div');
+            div.className = 'import-item';
+            div.innerHTML = `
+                <input type="checkbox" class="import-chk" id="chk_${globalIndex}" ${!isExactDuplicate ? 'checked' : ''} onchange="updateSelectedCount()">
+                <div class="import-info">
+                    <label for="chk_${globalIndex}" style="cursor:pointer;">
+                        <span class="import-label">${item.label}</span>
+                        <span class="import-snippet">${item.text.substring(0, 60)}${item.text.length > 60 ? '...' : ''}</span>
+                    </label>
+                </div>
+                <span class="badge ${isExactDuplicate ? 'badge-dup' : 'badge-new'}">
+                    ${isExactDuplicate ? 'DUPLICATE' : 'NEW'}
+                </span>
+            `;
+            listContainer.appendChild(div);
+            globalIndex++;
+        });
+    }
+
+    document.getElementById('importPreviewModal').style.display = 'flex';
+    updateSelectedCount(); // Kemaskini jumlah terpilih masa mula-mula buka
+}
+
+// Fungsi Baru: Select All / Deselect All
+function toggleSelectAll(status) {
+    const checkboxes = document.querySelectorAll('.import-chk');
+    checkboxes.forEach(chk => chk.checked = status);
+    updateSelectedCount();
+}
+
+// Fungsi Baru: Kemaskini Teks Jumlah Terpilih
+function updateSelectedCount() {
+    const total = document.querySelectorAll('.import-chk').length;
+    const selected = document.querySelectorAll('.import-chk:checked').length;
+    document.getElementById('importCountText').innerText = `${selected} / ${total} items selected`;
+}
+
+function closeImportModal() {
+    document.getElementById('importPreviewModal').style.display = 'none';
+    pendingImportData = null;
+}
+
+async function processImport() {
+    const checkboxes = document.querySelectorAll('#importList input[type="checkbox"]');
+    let importCount = 0;
+
+    checkboxes.forEach((chk, index) => {
+        if (chk.checked) {
+            const itemInfo = window.tempImportList[index];
+            const cat = itemInfo.category;
+
+            if (!dbData[cat]) dbData[cat] = [];
+
+            // Jika item tersebut memang duplicate (exact match), kita buang yang lama dulu
+            // supaya tak ada dua benda yang sama sebiji dalam satu kategori.
+            dbData[cat] = dbData[cat].filter(i => !(i.label === itemInfo.label && i.text === itemInfo.text));
+            
+            // Masukkan data baru
+            const cleanItem = { 
+                id: itemInfo.id || Date.now() + index, // Guna ID asal atau janakan baru
+                label: itemInfo.label,
+                text: itemInfo.text,
+                images: itemInfo.images || [],
+                catColor: itemInfo.catColor
+            };
+            
+            dbData[cat].push(cleanItem);
+            importCount++;
+        }
+    });
+
+    if (importCount > 0) {
+        await saveToIndexedDB();
+        renderButtons();
+        alert(`Berjaya import ${importCount} item! ✅`);
+    }
+    
+    closeImportModal();
+}
+
+
+//VIEW MODE
+let isZoomed = false;
+let isDragging = false;
+let hasMoved = false; // Untuk kesan jika user sedang drag atau sekadar klik
+let startX, startY, scrollLeft, scrollTop;
+
+function openPreview(src) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImg');
+    modalImg.src = src;
+    
+    modalImg.classList.remove('zoomed');
+    isZoomed = false;
+    
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    modal.scrollTop = 0;
+    modal.scrollLeft = 0;
+
+    // Setup event listeners untuk Dragging
+    setupDrag(modal, modalImg);
+}
+
+
+
+function setupDrag(modal, modalImg) {
+    modalImg.ondragstart = () => false;
+
+    const startDragging = (e) => {
+        if (!isZoomed) return;
+        
+        isDragging = true;
+        hasMoved = false; // Reset setiap kali klik bermula
+        modalImg.style.transition = 'none'; 
+        
+        const pageX = e.pageX || (e.touches ? e.touches[0].pageX : 0);
+        const pageY = e.pageY || (e.touches ? e.touches[0].pageY : 0);
+        
+        startX = pageX - modal.offsetLeft;
+        startY = pageY - modal.offsetTop;
+        scrollLeft = modal.scrollLeft;
+        scrollTop = modal.scrollTop;
+    };
+
+    const stopDragging = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        modalImg.style.transition = 'transform 0.3s ease';
+        
+        // Jika user drag lebih dari 5 pixel, kita anggap dia 'Moving', bukan 'Clicking'
+        // Ini menghalang modal dari tertutup/reset lepas drag
+    };
+
+    const move = (e) => {
+        if (!isDragging || !isZoomed) return;
+        
+        const pageX = e.pageX || (e.touches ? e.touches[0].pageX : 0);
+        const pageY = e.pageY || (e.touches ? e.touches[0].pageY : 0);
+        
+        const x = pageX - modal.offsetLeft;
+        const y = pageY - modal.offsetTop;
+        
+        const walkX = (x - startX) * 1.5; 
+        const walkY = (y - startY) * 1.5; 
+
+        // Jika pergerakan cukup besar, tandakan sebagai hasMoved
+        if (Math.abs(walkX) > 5 || Math.abs(walkY) > 5) {
+            hasMoved = true;
+            e.preventDefault(); // Halang browser skrol/swipe
+        }
+        
+        modal.scrollLeft = scrollLeft - walkX;
+        modal.scrollTop = scrollTop - walkY;
+    };
+
+    modal.addEventListener('mousedown', startDragging);
+    window.addEventListener('mouseup', stopDragging);
+    modal.addEventListener('mousemove', move);
+
+    modal.addEventListener('touchstart', startDragging, {passive: false});
+    modal.addEventListener('touchend', stopDragging);
+    modal.addEventListener('touchmove', move, {passive: false});
+}
+
+
+
+function toggleZoom(e) {
+    // Jika baru lepas drag, jangan buat apa-apa (elak reset)
+    e.stopPropagation();
+    if (hasMoved) {
+        hasMoved = false;
+        return;
+    }
+
+    e.stopPropagation();
+    const modalImg = document.getElementById('modalImg');
+    const modal = document.getElementById('imageModal');
+
+    if (!isZoomed) {
+        modalImg.classList.add('zoomed');
+        isZoomed = true;
+        
+        // Letakkan imej di tengah modal selepas zoom
+        setTimeout(() => {
+            modal.scrollTop = (modal.scrollHeight - modal.clientHeight) / 2;
+            modal.scrollLeft = (modal.scrollWidth - modal.clientWidth) / 2;
+        }, 10);
+    } else {
+        modalImg.classList.remove('zoomed');
+        isZoomed = false;
+        modal.scrollTop = 0;
+        modal.scrollLeft = 0;
+    }
+}
+
+
+
+function closePreview() {
+    document.getElementById('imageModal').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Aktifkan semula skrol asal
+}
+
+// Mengesan tekanan kunci pada papan kekunci (Esc)
+document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape") {
+        const modal = document.getElementById('imageModal');
+        const reportWrapper = document.getElementById('reportWrapper');
+        const adminPanel = document.getElementById('adminPanel');
+
+        // 1. Jika Preview Gambar sedang terbuka, tutup gambar
+        if (modal && modal.style.display === 'block') {
+            closePreview();
+        } 
+        // 2. Jika Report Panel (copy text) terbuka, tutup panel tersebut
+        else if (reportWrapper && reportWrapper.style.display === 'flex') {
+            reportWrapper.style.display = 'none';
+        }
+        // 3. Jika Data Management (Admin Panel) terbuka, tutup ia
+        else if (isAdminVisible) {
+            toggleManagement(); // Gunakan fungsi sedia ada supaya warna butang turut berubah
+        }
+    }
+});
+
+async function clearAppCache() {
+    if (confirm("Clear ALL Cache of this site and refresh? (Data remain unchanged)")) {
+        // Mengosongkan cache browser untuk aplikasi ini
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(key => caches.delete(key)));
+        }
+        // Force reload dari server/fail asal
+        location.reload(true);
+    }
+}
+async function resetAllData() {
+    if(confirm("Are you sure to clear all data?") && prompt("Type YES") === "YES") {
+        indexedDB.deleteDatabase(DB_NAME); location.reload();
+    }
+}
+
+function toggleDesktopMode() {
+    const body = document.getElementById('mainBody');
+    const btn = document.getElementById('viewToggleButton');
+    
+    body.classList.toggle('desktop-active');
+    
+    const isActive = body.classList.contains('desktop-active');
+    localStorage.setItem('desktopMode', isActive);
+    
+    // Tukar teks butang
+    updateButtonText(isActive);
+}
+
+
+
+function tryClosePreview(e) {
+    if (hasMoved) {
+        // The drag just ended, ignore closing modal click
+        hasMoved = false; // reset for next interaction
+        e.stopPropagation();
+        return;
+    }
+    closePreview();
+}
+
+
+
+function updateButtonText(isDesktop) {
+    const btn = document.getElementById('viewToggleButton');
+    if (btn) {
+        btn.innerHTML = isDesktop ? "🖥️ Now showing: Desktop Mode" : "📱 Now showing: Mobile Mode";
+        // Optional: Tukar warna butang supaya lebih jelas
+        btn.style.borderColor = isDesktop ? "#2b8a3e" : "#3498db";
+        btn.style.color = isDesktop ? "#2b8a3e" : "#3498db";
+    }
+}
+
+// Auto-load mode dan teks butang pilihan apabila page dibuka
+window.addEventListener('load', () => {
+    // Tambah baris ini untuk set teks butang asal ke Desktop Mode
+    updateButtonText(true); 
+
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('modalImg');
+
+    if (!modal || !img) return;
+
+    modal.addEventListener('click', function (e) {
+        if (!img.contains(e.target)) {
+            closePreview();
+        }
+    });
+});
+
+
+
+
+
+
+
+// Pastikan initDB dipanggil di akhir
+initDB();
+</script>
+<div id="importPreviewModal" class="import-modal">
+    <div class="import-content">
+        <div class="import-header">PREVIEW IMPORT DATA</div>
+        
+        <div class="import-controls">
+            <span style="font-size: 11px; color: #666; align-self: center;" id="importCountText">0 items selected</span>
+            <div>
+                <button class="btn-select-toggle" onclick="toggleSelectAll(true)">Select All</button>
+                <button class="btn-select-toggle" onclick="toggleSelectAll(false)">Deselect All</button>
+            </div>
+        </div>
+
+        <div id="importList" class="import-body">
+            </div>
+
+        <div class="import-footer">
+            <button class="btn-cancel" onclick="closeImportModal()">CANCEL</button>
+            <button class="btn-confirm" onclick="processImport()">CONFIRM IMPORT</button>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>
+
+
+
+

@@ -1062,14 +1062,28 @@ if (sameText && sameImages) {
                     }
                 });
             }
-            window.tempImportList.push({ ...item, category: cat });
+            const importKey = cat + '|||' + item.label;
+
+window.tempImportList.push({
+    key: importKey,
+    category: cat,
+    label: item.label,
+    text: item.text,
+    images: item.images || []
+});
+
+
 const checked =
     isExactDuplicate ? '' : 'checked';
 
             const div = document.createElement('div');
             div.className = 'import-item';
             div.innerHTML = `
-                <input type="checkbox" class="import-chk" id="chk_${globalIndex}" ${!isExactDuplicate ? 'checked' : ''} onchange="updateSelectedCount()">
+<input type="checkbox"
+       class="import-chk"
+       data-key="${importKey}"
+       ${checked}>
+
                 <div class="import-info">
                     <label for="chk_${globalIndex}" style="cursor:pointer;">
                         <span class="import-label">${item.label}</span>
@@ -1077,20 +1091,30 @@ const checked =
                     </label>
                 </div>
                 <span class="badge ${
-                    isExactDuplicate
-                        ? 'badge-dup'
-                        : isLabelDuplicate
-                            ? 'badge-warn'
-                            : 'badge-new'
-                }">
-                    ${
-                        isExactDuplicate
-                            ? 'DUPLICATE'
-                            : isLabelDuplicate
-                                ? 'UPDATE'
-                                : 'NEW'
-                    }
-                </span>
+    isExactDuplicate
+        ? 'badge-dup'
+        : isLabelDuplicate
+            ? 'badge-warn'
+            : 'badge-new'
+}">
+    ${
+        isExactDuplicate
+            ? 'DUPLICATE'
+            : isLabelDuplicate
+                ? 'UPDATE'
+                : 'NEW'
+    }
+</span>
+
+${isLabelDuplicate && !isExactDuplicate ? `
+<a href="#"
+   style="font-size:10px;margin-left:6px;color:#2980b9;text-decoration:underline"
+   onclick="showCompare('${importKey}'); return false;">
+   Compare
+</a>
+
+` : ''}
+
 
 
             `;
@@ -1102,6 +1126,77 @@ const checked =
     document.getElementById('importPreviewModal').style.display = 'flex';
     updateSelectedCount(); // Kemaskini jumlah terpilih masa mula-mula buka
 }
+
+
+function showCompare(key) {
+    const item = window.tempImportList.find(i => i.key === key);
+    if (!item) {
+        alert("Data import tak jumpa");
+        return;
+    }
+
+    const cat = item.category;
+
+    const existing = (dbData[cat] || []).find(
+        i => i.label === item.label
+    );
+
+    if (!existing) {
+        alert("Data lama tak jumpa");
+        return;
+    }
+
+document.getElementById("compareOld").innerHTML = `
+<strong>LABEL</strong><br>
+${existing.label}<br><br>
+
+<strong>MESSAGE</strong><br>
+<pre style="white-space:pre-wrap">${existing.text}</pre>
+
+<strong>IMAGES</strong><br>
+${renderCompareImages(existing.images)}
+`;
+
+
+document.getElementById("compareNew").innerHTML = `
+<strong>LABEL</strong><br>
+${item.label}<br><br>
+
+<strong>MESSAGE</strong><br>
+<pre style="white-space:pre-wrap">${item.text}</pre>
+
+<strong>IMAGES</strong><br>
+${renderCompareImages(item.images)}
+`;
+
+
+    document.getElementById("compareModal").style.display = 'flex';
+}
+
+function renderCompareImages(images) {
+    if (!images || images.length === 0) return 'No images';
+
+    return images
+        .map(src => `<img src="${src}" style="
+            width:100%;
+            max-height:120px;
+            object-fit:cover;
+            border:1px solid #ccc;
+            border-radius:6px;
+            margin-bottom:6px;
+        ">`)
+        .join('');
+}
+
+
+function closeCompare() {
+    document.getElementById("compareModal").style.display = 'none';
+}
+
+
+
+
+
 
 // Fungsi Baru: Select All / Deselect All
 function toggleSelectAll(status) {
@@ -1126,34 +1221,32 @@ async function processImport() {
     const checkboxes = document.querySelectorAll('#importList input[type="checkbox"]');
     let importCount = 0;
 
-    checkboxes.forEach((chk, index) => {
-        if (chk.checked) {
-            const itemInfo = window.tempImportList[index];
-            const cat = itemInfo.category;
+    checkboxes.forEach(chk => {
+    if (!chk.checked) return;
 
-            if (!dbData[cat]) dbData[cat] = [];
+    const key = chk.dataset.key;
+    const itemInfo = window.tempImportList.find(i => i.key === key);
+    if (!itemInfo) return;
 
-            // Jika item tersebut memang duplicate (exact match), kita buang yang lama dulu
-            // supaya tak ada dua benda yang sama sebiji dalam satu kategori.
-            // 🔁 OVERWRITE rule: buang item lama jika LABEL sama
-dbData[cat] = dbData[cat].filter(
-    i => i.label !== itemInfo.label
-);
+    const cat = itemInfo.category;
+    if (!dbData[cat]) dbData[cat] = [];
 
-            
-            // Masukkan data baru
-            const cleanItem = { 
-                id: itemInfo.id || Date.now() + index, // Guna ID asal atau janakan baru
-                label: itemInfo.label,
-                text: itemInfo.text,
-                images: itemInfo.images || [],
-                catColor: itemInfo.catColor
-            };
-            
-            dbData[cat].push(cleanItem);
-            importCount++;
-        }
+    // UPDATE rule → buang label lama
+    dbData[cat] = dbData[cat].filter(
+        i => i.label !== itemInfo.label
+    );
+
+    dbData[cat].push({
+        id: Date.now() + Math.random(),
+        label: itemInfo.label,
+        text: itemInfo.text,
+        images: itemInfo.images || [],
+        catColor: itemInfo.catColor
     });
+
+    importCount++;
+});
+
 
     if (importCount > 0) {
         await saveToIndexedDB();
@@ -1434,6 +1527,29 @@ initDB();
     <div class="import-footer">
       <button class="btn-cancel" onclick="closeExportModal()">CANCEL</button>
       <button class="btn-confirm" onclick="processExport()">EXPORT SELECTED</button>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="compareModal" class="import-modal">
+  <div class="import-content" style="max-width:900px;">
+    <div class="import-header">COMPARE DATA</div>
+
+    <div class="import-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <strong>Existing</strong>
+        <pre id="compareOld" style="font-size:11px;background:#f4f6f8;padding:10px;height:300px;overflow:auto"></pre>
+      </div>
+      <div>
+        <strong>Incoming</strong>
+        <pre id="compareNew" style="font-size:11px;background:#f4f6f8;padding:10px;height:300px;overflow:auto"></pre>
+      </div>
+    </div>
+
+    <div class="import-footer">
+      <button class="btn-confirm" onclick="closeCompare()">CLOSE</button>
     </div>
   </div>
 </div>

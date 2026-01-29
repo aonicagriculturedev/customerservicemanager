@@ -344,6 +344,15 @@ body.desktop-active .admin-section {
     align-items: center; justify-content: center;
     backdrop-filter: blur(4px);
 }
+.export-modal {
+    display: none;
+    position: fixed;
+    z-index: 10002;
+    left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
 .import-content {
     background: white;
     width: 95%;
@@ -509,8 +518,20 @@ body.desktop-active .admin-section {
 </div>
 
 <div id="advancedContent" class="advanced-content">
-    <button class="btn-save" style="background:#555; font-size:10px; padding:8px;" onclick="exportData()">⬇️ BACKUP ALL</button>
-    
+<!-- BACKUP ALL -->
+<button class="btn-save"
+        style="background:#2b8a3e; font-size:10px; padding:8px;"
+        onclick="exportData()">
+    ⬇️ BACKUP ALL (Instant)
+</button>
+
+<!-- ADVANCED EXPORT -->
+<button class="btn-save"
+        style="background:#555; font-size:10px; padding:8px; margin-top:5px;"
+        onclick="showExportPreview()">
+    📦 ADVANCED EXPORT (Select)
+</button>
+
     <button class="btn-save" style="background:#777; font-size:10px; padding:8px; margin-top:5px;" onclick="document.getElementById('importFile').click()">⬆️ UPLOAD BACKUP</button>
     <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
     
@@ -800,12 +821,7 @@ async function changeCategoryColor(category, newColor) {
 }
 
 
-   function openPreview(src) {
-       const modal = document.getElementById('imageModal');
-      const modalImg = document.getElementById('modalImg');
-       modalImg.src = src;
-       modal.style.display = 'flex';
-  }
+
 
 function closePreview() {
     document.getElementById('imageModal').style.display = 'none';
@@ -861,11 +877,130 @@ async function copyIndividualImage(src, btn) {
     await navigator.clipboard.write([new ClipboardItem({[b.type]: b})]);
     btn.innerText = "OK!"; setTimeout(() => btn.innerText = "COPY 🖼️", 1000);
 }
+
 function exportData() {
-    const b = new Blob([JSON.stringify(dbData)], {type:'application/json'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b);
-    a.download = "backup.json"; a.click();
+    if (!dbData || Object.keys(dbData).length === 0) {
+        alert("Tiada data untuk dibackup!");
+        return;
+    }
+
+    const blob = new Blob(
+        [JSON.stringify(dbData, null, 2)],
+        { type: 'application/json' }
+    );
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+
+    // ✅ FULL backup filename
+    const now = new Date();
+    const date = now.toISOString().slice(0,10); // YYYY-MM-DD
+    const time = now.toTimeString().slice(0,8).replace(/:/g,'-'); // HH-MM-SS
+    a.download = `AonicCSData_FULL_${date}_${time}.json`;
+
+    a.click();
+    URL.revokeObjectURL(a.href);
 }
+
+function selectAllExport(state) {
+    document
+        .querySelectorAll('.export-chk')
+        .forEach(chk => chk.checked = state);
+}
+
+
+
+function showExportPreview() {
+    const container = document.getElementById('exportList');
+    container.innerHTML = '';
+
+    let index = 0;
+
+    for (let cat in dbData) {
+        const header = document.createElement('div');
+        header.className = 'import-group-header';
+        header.innerHTML = `
+            <span>📁 ${cat}</span>
+            <input type="checkbox" checked 
+                   onchange="toggleCategoryExport('${cat}', this.checked)">
+        `;
+        container.appendChild(header);
+
+        dbData[cat].forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'import-item';
+    div.innerHTML = `
+        <input type="checkbox" class="export-chk"
+               data-cat="${cat}"
+               data-index="${idx}"
+               checked>
+        <div class="import-info">
+            <span class="import-label">${item.label}</span>
+            <span class="import-snippet">
+                ${item.text.substring(0,50)}...
+            </span>
+        </div>
+    `;
+    container.appendChild(div);
+});
+
+    }
+
+    document.getElementById('exportModal').style.display = 'flex';
+}
+
+function toggleCategoryExport(category, status) {
+    const checkboxes = document.querySelectorAll(
+        `.export-chk[data-cat="${category}"]`
+    );
+    checkboxes.forEach(chk => chk.checked = status);
+}
+
+function processExport() {
+    const selected = document.querySelectorAll('.export-chk:checked');
+    if (selected.length === 0) {
+        alert("Tiada data dipilih!");
+        return;
+    }
+
+    const exportDataObj = {};
+
+    selected.forEach(chk => {
+        const cat = chk.dataset.cat;
+        const idx = chk.dataset.index;
+        exportDataObj[cat] ??= [];
+        exportDataObj[cat].push(dbData[cat][idx]);
+    });
+
+    const blob = new Blob(
+        [JSON.stringify(exportDataObj, null, 2)],
+        { type: 'application/json' }
+    );
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+
+    // ✅ PARTIAL backup filename
+    const now = new Date();
+    const date = now.toISOString().slice(0,10);
+    const time = now.toTimeString().slice(0,8).replace(/:/g,'-');
+    a.download = `AonicCSData_PARTIAL_${date}_${time}.json`;
+
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    closeExportModal();
+}
+
+
+
+function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+}
+
+
+
+
 let pendingImportData = null;
 
 function importData(e) {
@@ -1237,6 +1372,34 @@ initDB();
         </div>
     </div>
 </div>
+
+<div id="exportModal" class="export-modal">
+
+  <div class="import-content">
+    <div class="import-header">SELECT DATA TO EXPORT</div>
+<div style="display:flex; gap:6px; margin-bottom:8px;">
+    <button class="btn-save"
+            style="background:#2b8a3e; font-size:10px; padding:6px 8px;"
+            onclick="selectAllExport(true)">
+        ✔ Select All
+    </button>
+
+    <button class="btn-save"
+            style="background:#999; font-size:10px; padding:6px 8px;"
+            onclick="selectAllExport(false)">
+        ✖ Deselect All
+    </button>
+</div>
+
+    <div class="import-body" id="exportList"></div>
+
+    <div class="import-footer">
+      <button class="btn-cancel" onclick="closeExportModal()">CANCEL</button>
+      <button class="btn-confirm" onclick="processExport()">EXPORT SELECTED</button>
+    </div>
+  </div>
+</div>
+
 </body>
 
 </html>

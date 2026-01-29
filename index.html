@@ -1037,10 +1037,12 @@ function showImportPreview(newData) {
         newData[cat].forEach(item => {
             // Logik Duplicate: Check Kategori + Label + Mesej Content
             let isExactDuplicate = false;
+            
+            let isLabelDuplicate = false;
+           
             if (dbData[cat]) {
-                isExactDuplicate = dbData[cat].some(localItem => 
-                    localItem.label === item.label && 
-                    localItem.text === item.text
+                isLabelDuplicate = dbData[cat].some(
+                    localItem => localItem.label === item.label
                 );
             }
 
@@ -1056,9 +1058,10 @@ function showImportPreview(newData) {
                         <span class="import-snippet">${item.text.substring(0, 60)}${item.text.length > 60 ? '...' : ''}</span>
                     </label>
                 </div>
-                <span class="badge ${isExactDuplicate ? 'badge-dup' : 'badge-new'}">
-                    ${isExactDuplicate ? 'DUPLICATE' : 'NEW'}
+                <span class="badge ${isLabelDuplicate ? 'badge-dup' : 'badge-new'}">
+                    ${isLabelDuplicate ? 'WILL OVERWRITE' : 'NEW'}
                 </span>
+
             `;
             listContainer.appendChild(div);
             globalIndex++;
@@ -1101,7 +1104,11 @@ async function processImport() {
 
             // Jika item tersebut memang duplicate (exact match), kita buang yang lama dulu
             // supaya tak ada dua benda yang sama sebiji dalam satu kategori.
-            dbData[cat] = dbData[cat].filter(i => !(i.label === itemInfo.label && i.text === itemInfo.text));
+            // 🔁 OVERWRITE rule: buang item lama jika LABEL sama
+dbData[cat] = dbData[cat].filter(
+    i => i.label !== itemInfo.label
+);
+
             
             // Masukkan data baru
             const cleanItem = { 
@@ -1403,6 +1410,7 @@ initDB();
 </body>
 
 </html>
+
 
 
 
